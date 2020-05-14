@@ -1,0 +1,12 @@
+{
+    "dev": {
+        "app_function": "app.app",
+        "aws_region": "ap-southeast-1",
+        "profile_name": "zappa-admin",
+        "project_name": "backend",
+        "runtime": "python3.7",
+        "s3_bucket": "zappa-05me30sa5",
+        "api_key_required": true,
+        "cors": true
+    }
+}
