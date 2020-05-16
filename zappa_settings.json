@@ -6,7 +6,6 @@
         "project_name": "backend",
         "runtime": "python3.7",
         "s3_bucket": "zappa-05me30sa5",
-        "api_key_required": true,
         "cors": true
     }
 }
