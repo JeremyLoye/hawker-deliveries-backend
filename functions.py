@@ -30,6 +30,34 @@ def insert_listing(db, date, code, meal, orderAvailable=True):
 def del_listing(db, date):
     return db.dailyListing.delete_one({"date": date}).deleted_count
 
+def update_stall_availability(db, date, stallId, availability):
+    listing = fetch_listing(db, date)
+    if not listing:
+        raise Exception("Listing unavailable for this date")
+    if type(availability) != bool:
+        raise Exception("Availability provided is not a boolean")
+    stalls = listing['stalls']
+    for stall in stalls:
+        if stall['stallId'] == stallId:
+            stall['available'] = availability
+            updated = db.dailyListing.update_one({"date": date}, {"$set": {"stalls": stalls}}).modified_count
+            return updated
+    raise Exception("No such stall in this listing")
+
+def update_food_quantity(db, date, stallId, foodId, quantity):
+    listing = fetch_listing(db, date)
+    if not listing:
+        raise Exception("Listing unavailable for this date")
+    stalls = listing['stalls']
+    for stall in stalls:
+        if stall['stallId'] == stallId:
+            for food in stall['food']:
+                if food['id'] == foodId:
+                    food['quantity'] = int(quantity)
+                    updated = db.dailyListing.update_one({"date": date}, {"$set": {"stalls": stalls}}).modified_count
+                    return updated
+    raise Exception("No such stall or food in this listing")
+
 """
 hawker functions
 """

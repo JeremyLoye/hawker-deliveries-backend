@@ -47,6 +47,53 @@ def add_listing(date):
             "error": "No request body provided"
         })
 
+@app.route('/listings/<date>/delete', methods=["POST"])
+def remove_listing(date):
+    try:
+        return jsonify({
+            "success": del_listing(db, date)
+        })
+    except Exception as e:
+        return jsonify({
+            "error": str(e)
+        })
+
+@app.route('/listings/<date>/availability', methods=["POST"])
+def update_availability(date):
+    if request.json:
+        data = request.json
+        try:
+            modified = update_stall_availability(db, date, data['stallId'], data['available'])
+            return jsonify({
+                "success": modified
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/listings/<date>/quantity', methods=["POST"])
+def update_quantity(date):
+    if request.json:
+        data = request.json
+        try:
+            modified = update_food_quantity(db, date, data['stallId'], data['foodId'], data['quantity'])
+            return jsonify({
+                "success": modified
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
 
 @app.route('/hawkers')
 def get_all_hawkers():
