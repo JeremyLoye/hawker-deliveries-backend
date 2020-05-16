@@ -71,15 +71,20 @@ def fetch_hawker_by_code(db, code, _id=0):
     return db.hawker.find_one({"code": code}, {"_id": _id})
 
 def insert_hawker(db, name, code, address, image):
+    if fetch_hawker_by_code(db, code):
+        raise Exception("Hawker with code {} already exists!".format(code))
     return db['hawker'].insert_one({
         "name": name,
         "code": code,
         "address": address,
         "image": image
-    })
+    }).inserted_id
 
-def update_hawker(db, code, mapping):
-    return db.hawker.update_one({"code": "THM"}, {"$set": mapping}).modified_count
+def del_hawker(db, code):
+    return db.hawker.delete_one({"code": code}).deleted_count
+
+def update_hawker(db, code, hawker):
+    return db.hawker.find_one_and_update({"code": code}, {"$set": hawker})
 
 """
 stall functions
@@ -105,4 +110,10 @@ def insert_stall(db, name, stall_type, location, stallNo, food, about, contact):
         "contact": contact
     }
     inserted_stall = db['stall'].insert_one(stall).inserted_id
-    return inserted_stall, modified_hawker
+    return inserted_stall
+
+def del_stall(db, stallId):
+    return db.stall.delete_one({"stallId": stallId}).deleted_count
+
+def update_stall(db, stallId, stall):
+    return db.stall.find_one_and_update({"stallId": stallId}, {"$set": stall})

@@ -94,6 +94,9 @@ def update_quantity(date):
             "error": "No request body provided"
         })
 
+@app.route('/hawkercodes', methods=["GET"])
+def get_hawker_codes():
+    return jsonify([doc for doc in db.hawker.find({}, {"_id": 0, "name":1, "code": 1})])
 
 @app.route('/hawkers')
 def get_all_hawkers():
@@ -101,19 +104,115 @@ def get_all_hawkers():
         "hawkers": fetch_all_hawkers(db)
     })
 
-@app.route('/hawkers/code/<code>')
+@app.route('/hawkers/<code>')
 def get_hawker_by_code(code):
     return jsonify(fetch_hawker_by_code(db, code))
 
-@app.route('/stalls/stallId/<id>')
+@app.route('/hawkers/<code>/add', methods=["POST"])
+def add_hawker(code):
+    if request.json:
+        data = request.json
+        try:
+            inserted_id = insert_hawker(db, data['name'], code, data['address'], data['image'])
+            return jsonify({
+                "success": str(inserted_id)
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else: 
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/hawkers/<code>/delete', methods=["POST"])
+def remove_hawker(code):
+    try:
+        return jsonify({
+            "success": del_hawker(db, code)
+        })
+    except Exception as e:
+        return jsonify({
+            "error": str(e)
+        })
+
+@app.route('/hawkers/<code>/update', methods=["POST"])
+def update_hawker_info(code):
+    if request.json:
+        data = request.json
+        try:
+            updated_obj = update_hawker(db, code, data)
+            updated_obj.pop("_id", None)
+            return jsonify({
+                "success": updated_obj
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/hawkers/<code>/stalls', methods=["GET"])
+def get_stalls_by_hawker(code):
+    return jsonify({
+        "stalls": fetch_stalls_by_location(db, code)
+    })
+
+@app.route('/stalls/<id>')
 def get_stall_by_id(id):
     return jsonify(fetch_stall_by_id(db, id))
 
-@app.route('/stalls/location/<location>')
-def get_stalls_by_location(location):
-    return jsonify({
-        "stalls": fetch_stalls_by_location(db, location)
-    })
+@app.route('/stalls/insert', methods=["POST"])
+def add_stall():
+    if request.json:
+        data = request.json
+        try:
+            inserted_id = insert_stall(db, data['name'], data['type'], data['location'], data['stallNo'], data['stallId'], data['food'], data['about'], data['contact'])
+            return jsonify({
+                "success": inserted_id
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })    
+
+@app.route('/stalls/<stallId>/delete', methods=["POST"])
+def remove_stall(stallId):
+    try:
+        return jsonify({
+            "success": del_stall(db, stallId)
+        })
+    except Exception as e:
+        return jsonify({
+            "error": str(e)
+        })
+
+@app.route('/stalls/<stallId>/update', methods=["POST"])
+def update_stall_info(stallId):
+    if request.json:
+        data = request.json
+        try:
+            updated_obj = update_stall(db, stallId, data)
+            updated_obj.pop("_id", None)
+            return jsonify({
+                "success": updated_obj
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
 
 @app.route('/main/<date>/product/<int:id>', methods=["GET", "POST"])
 def test(date, id):
