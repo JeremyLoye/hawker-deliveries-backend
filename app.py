@@ -317,6 +317,70 @@ def update_payment():
             "error": "No request body provided"
         })
 
+@app.route('/transactions/datemeal/<date>/<meal>', methods=["POST"])
+def get_transaction_by_date_meal(date, meal):
+    try:
+        return jsonify({
+            "transactions": fetch_transactions_by_date_meal(db, date, meal)
+        })
+    except Exception as e:
+        return jsonify({
+            "error": str(e)
+        })
+
+@app.route('/transactions/user', methods=["POST"])
+def get_transactions_by_user():
+    if request.json:
+        data = request.json
+        try:
+            return jsonify({
+                "transactions": fetch_transactions_for_user(db, data['awsId'])
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/transactions/add', methods=["POST"])
+def add_transaction():
+    if request.json:
+        data = request.json
+        try:
+            inserted_id = insert_transaction(db, data['awsId'], data['date'], data['cart'], data['paymentMethod'], data['paymentUsername'], data['meal'])
+            return jsonify({
+                "success": str(inserted_id)
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/transactions/update', methods=["POST"])
+def update_transaction_paid():
+    if request.json:
+        data = request.json
+        try:
+            modified = update_transaction(db, data['_id'], data['paid'])
+            return jsonify({
+                "success": modified
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
 @app.route('/main/<date>/product/<int:id>', methods=["GET", "POST"])
 def test(date, id):
   storeList = [

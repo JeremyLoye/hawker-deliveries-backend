@@ -1,4 +1,5 @@
 import datetime
+from bson.objectid import ObjectId
 
 """
 dailyListing functions
@@ -175,3 +176,37 @@ def update_user_payment(db, aws_id, method, username):
 """
 transaction functions
 """
+
+def fetch_transactions_by_date_meal(db, date, meal):
+    transactions = []
+    for doc in db.transaction.find({"date": date, "meal": meal}):
+        doc['_id'] = str(doc['_id'])
+        transactions.append(doc)
+    return transactions
+
+def insert_transaction(db, awsId, date, cart, paymentMethod, paymentUsername, meal, paid=False):
+    if not fetch_user(db, aws_id):
+        raise Exception("User with this ID already exists!")
+    transaction = {
+        "dateTime": datetime.datetime.now(),
+        "date": date,
+        "awsId": awsId,
+        "cart": cart,
+        "paid": paid,
+        "paymentMethod": paymentMethod,
+        "paymentUsername": paymentUsername,
+        "totalPrice": sum([food['price'] for food in cart]),
+        "meal": meal
+    }
+    inserted_id = db.transaction.insert_one(transaction).inserted_id
+    return inserted_id
+
+def update_transaction(db, _id, paid):
+    return db.transaction.update_one({"_id": ObjectId(_id)}, {"$set": {"paid": paid}}).modified_count
+
+def fetch_transactions_for_user(db, awsId):
+    transactions = []
+    for doc in db.transaction.find({"awsId": awsId}):
+        doc['_id'] = str(doc['_id'])
+        transactions.append(doc)
+    return transactions
