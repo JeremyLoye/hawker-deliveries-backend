@@ -20,6 +20,8 @@ def insert_listing(db, date, code, meal, orderAvailable=True):
         listing['stalls'].append({
             "stallId": stall['stallId'],
             "name": stall['name'],
+            "type": stall['type'],
+            "image": stall['image'],
             "available": True,
             "food": [{**food, 'quantity': -1} for food in stall['food'] if food['available']]
         })
@@ -58,6 +60,14 @@ def update_food_quantity(db, date, stallId, foodId, quantity):
                     return updated
     raise Exception("No such stall or food in this listing")
 
+def fetch_stall_for_date(db, stallId, date, _id=0):
+    stall = db.dailyListing.find_one({"date": date}, {"stalls": {"$elemMatch": {"stallId": stallId}}, "_id": _id})['stalls'][0]
+    new_info = fetch_stall_by_id(db, stall['stallId'])
+    stall['about'] = new_info['about']
+    stall['contact'] = new_info['contact']
+    stall['stallNo'] = new_info['stallNo']
+    return stall
+
 """
 hawker functions
 """
@@ -95,7 +105,7 @@ def fetch_stall_by_id(db, stallId, _id=0):
 def fetch_stalls_by_location(db, location, _id=0):
     return [doc for doc in db.stall.find({"location": location}, {"_id": _id})]
 
-def insert_stall(db, name, stall_type, location, stallNo, food, about, contact):
+def insert_stall(db, name, stall_type, location, image, stallNo, food, about, contact):
     stallId = "{}_{}".format(location, stallNo)
     if fetch_stall_by_id(db, stallId):
         raise Exception("Store already exists!")
@@ -103,6 +113,7 @@ def insert_stall(db, name, stall_type, location, stallNo, food, about, contact):
         "name": name,
         "type": stall_type,
         "location": location,
+        "image": image,
         "stallNo": stallNo,
         "stallId": stallId,
         "food": food,
@@ -117,3 +128,50 @@ def del_stall(db, stallId):
 
 def update_stall(db, stallId, stall):
     return db.stall.find_one_and_update({"stallId": stallId}, {"$set": stall})
+
+"""
+user functions
+"""
+import datetime
+
+def insert_user(db, aws_id, name, phone, email, payment_accounts=[]):
+    if fetch_user(db, aws_id):
+        raise Exception("User with this ID already exists!")
+    user = {
+        "awsId": aws_id,
+        "name": name,
+        "phone": phone,
+        "email": email,
+        "payment": payment_accounts,
+        "dateJoined": datetime.datetime.now()
+    }
+    inserted_user = db.user.insert_one(user).inserted_id
+    return inserted_user
+    
+def fetch_user(db, aws_id, _id=0):
+    return db.user.find_one({"awsId": aws_id}, {"_id": _id})
+
+def check_payment_method(db, method, username):
+    return len([x for x in db.user.find({"payment.method": method, "payment.username": username}, {"_id":1}).limit(1)])==0
+
+def insert_user_payment(db, aws_id, method, username):
+    if len([x for x in db.user.find({"awsId": aws_id, "payment.method": method}, {"_id": 1}).limit(1)]) > 0:
+        raise Exception("Payment method {} already exists for user".format(method))
+    return db.user.update_one({"awsId": aws_id}, {"$push": {"payment": {
+        "method": method,
+        "username": username
+    }}}).modified_count
+
+def delete_user_payment(db, aws_id, method, username):
+    if len([x for x in db.user.find({"awsId": aws_id, "payment.method": method, "payment.username": username}, {"_id": 1}).limit(1)])==0:
+        raise Exception("Payment method {} with this username does not exist for user".format(method))
+    return db.user.update_one({"awsId": aws_id}, {"$pull": {"payment": {"method": method, "username": username}}}).modified_count
+
+def update_user_payment(db, aws_id, method, username):
+    if len([x for x in db.user.find({"awsId": aws_id, "payment.method": method}, {"_id": 1}).limit(1)])==0:
+        raise Exception("Payment method {} does not exist for user".format(method))
+    return db.user.update_one({"awsId": aws_id, "payment.method": method}, {"$set": {"payment.$.username": username}}).modified_count
+
+"""
+transaction functions
+"""

@@ -94,9 +94,19 @@ def update_quantity(date):
             "error": "No request body provided"
         })
 
+@app.route('/listings/<date>/stall/<stallId>', methods=["GET"])
+def get_stall_for_date(date, stallId):
+    return jsonify(fetch_stall_for_date(db, stallId, date))
+
 @app.route('/hawkercodes', methods=["GET"])
 def get_hawker_codes():
     return jsonify([doc for doc in db.hawker.find({}, {"_id": 0, "name":1, "code": 1})])
+
+@app.route('/stallcodes/<hawkercode>', methods=["GET"])
+def get_stall_codes(hawkercode):
+    return jsonify({
+        "stalls": [doc for doc in db.stall.find({"location":hawkercode}, {"_id":0, "stallId":1, "name":1, "stallNo": 1})]
+    })
 
 @app.route('/hawkers')
 def get_all_hawkers():
@@ -171,9 +181,9 @@ def add_stall():
     if request.json:
         data = request.json
         try:
-            inserted_id = insert_stall(db, data['name'], data['type'], data['location'], data['stallNo'], data['stallId'], data['food'], data['about'], data['contact'])
+            inserted_id = insert_stall(db, data['name'], data['type'], data['location'], data['image'], data['stallNo'], data['food'], data['about'], data['contact'])
             return jsonify({
-                "success": inserted_id
+                "success": str(inserted_id)
             })
         except Exception as e:
             return jsonify({
@@ -204,6 +214,99 @@ def update_stall_info(stallId):
             updated_obj.pop("_id", None)
             return jsonify({
                 "success": updated_obj
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/users/<userId>', methods=["POST"])
+def get_user(userId):
+    return jsonify(fetch_user(db, userId))
+
+@app.route('/users/add', methods=["POST"])
+def add_user():
+    if request.json:
+        data = request.json
+        try:
+            inserted_id = insert_user(db, data['awsId'], data['name'], data['phone'], data['email'], data['payment'])
+            return jsonify({
+                "success": str(inserted_id)
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/users/payment/check', methods=["POST"])
+def check_payment_method():
+    if request.json:
+        data = request.json
+        try:
+            return jsonify({
+                "available": check_payment_method(db, data['method'], data['username'])
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/users/payment/add', methods=["POST"])
+def add_user_payment():
+    if request.json:
+        data = request.json
+        try:
+            modified = insert_user_payment(db, data['awsId'], data['method'], data['username'])
+            return jsonify({
+                "success": modified
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/users/payment/delete', methods=["POST"])
+def remove_user_payment():
+    if request.json:
+        data = request.json
+        try:
+            modified = delete_user_payment(db, data['awsId'], data['method'], data['username'])
+            return jsonify({
+                "success": modified
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/users/payment/update', methods=["POST"])
+def update_payment():
+    if request.json:
+        data = request.json
+        try:
+            modified = update_user_payment(db, data['awsId'], data['method'], data['username'])
+            return jsonify({
+                "success": modified
             })
         except Exception as e:
             return jsonify({
