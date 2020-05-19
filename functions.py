@@ -8,14 +8,15 @@ def fetch_all_listings(db, _id=0):
     today = datetime.datetime.now().strftime("%d%m%Y")
     return [doc for doc in db.dailyListing.find({"date": {"$gte": today}}, {"_id": _id})]
 
-def fetch_listing(db, date, _id=0):
-    listing = db.dailyListing.find_one({"date": date}, {"_id": _id})
-    listing['stalls'].sort(key=lambda x: x['stallId'])
-    listing['stalls'].sort(key=lambda x: x['available'], reverse=True)
+def fetch_listing(db, date, meal, _id=0):
+    listing = db.dailyListing.find_one({"date": date, "meal": meal}, {"_id": _id})
+    if listing:
+        listing['stalls'].sort(key=lambda x: x['stallId'])
+        listing['stalls'].sort(key=lambda x: x['available'], reverse=True)
     return listing
 
 def insert_listing(db, date, code, meal, orderAvailable=True):
-    if fetch_listing(db, date):
+    if fetch_listing(db, date, meal):
         raise Exception("Listing for this date already exists, use update instead!")
     listing = fetch_hawker_by_code(db, code)
     listing['date'] = date
@@ -36,8 +37,8 @@ def insert_listing(db, date, code, meal, orderAvailable=True):
 def del_listing(db, date):
     return db.dailyListing.delete_one({"date": date}).deleted_count
 
-def update_stall_availability(db, date, stallId, availability):
-    listing = fetch_listing(db, date)
+def update_stall_availability(db, date, stallId, meal, availability):
+    listing = fetch_listing(db, date, meal)
     if not listing:
         raise Exception("Listing unavailable for this date")
     if type(availability) != bool:
@@ -50,8 +51,8 @@ def update_stall_availability(db, date, stallId, availability):
             return updated
     raise Exception("No such stall in this listing")
 
-def update_food_quantity(db, date, stallId, foodId, quantity):
-    listing = fetch_listing(db, date)
+def update_food_quantity(db, date, stallId, foodId, meal, quantity):
+    listing = fetch_listing(db, date, meal)
     if not listing:
         raise Exception("Listing unavailable for this date")
     stalls = listing['stalls']
@@ -188,7 +189,7 @@ def fetch_transactions_by_date_meal(db, date, meal):
     return transactions
 
 def insert_transaction(db, awsId, date, cart, paymentMethod, paymentUsername, meal, paid=False):
-    if not fetch_user(db, aws_id):
+    if not fetch_user(db, awsId):
         raise Exception("User with this ID already exists!")
     transaction = {
         "dateTime": datetime.datetime.now(),
