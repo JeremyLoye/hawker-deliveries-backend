@@ -9,7 +9,10 @@ def fetch_all_listings(db, _id=0):
     return [doc for doc in db.dailyListing.find({"date": {"$gte": today}}, {"_id": _id})]
 
 def fetch_listing(db, date, _id=0):
-    return db.dailyListing.find_one({"date": date}, {"_id": _id})
+    listing = db.dailyListing.find_one({"date": date}, {"_id": _id})
+    listing['stalls'].sort(key=lambda x: x['stallId'])
+    listing['stalls'].sort(key=lambda x: x['available'], reverse=True)
+    return listing
 
 def insert_listing(db, date, code, meal, orderAvailable=True):
     if fetch_listing(db, date):
@@ -104,7 +107,7 @@ def fetch_stall_by_id(db, stallId, _id=0):
     return db.stall.find_one({"stallId": stallId}, {"_id": _id})
 
 def fetch_stalls_by_location(db, location, _id=0):
-    return [doc for doc in db.stall.find({"location": location}, {"_id": _id})]
+    return [doc for doc in db.stall.find({"location": location}, {"_id": _id}, sort=[("stallId", 1)])]
 
 def insert_stall(db, name, stall_type, location, image, stallNo, food, about, contact):
     stallId = "{}_{}".format(location, stallNo)
@@ -206,7 +209,7 @@ def update_transaction(db, _id, paid):
 
 def fetch_transactions_for_user(db, awsId):
     transactions = []
-    for doc in db.transaction.find({"awsId": awsId}):
+    for doc in db.transaction.find({"awsId": awsId}, sort=[("dateTime", -1)]):
         doc['_id'] = str(doc['_id'])
         transactions.append(doc)
     return transactions

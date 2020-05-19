@@ -105,7 +105,7 @@ def get_hawker_codes():
 @app.route('/stallcodes/<hawkercode>', methods=["GET"])
 def get_stall_codes(hawkercode):
     return jsonify({
-        "stalls": [doc for doc in db.stall.find({"location":hawkercode}, {"_id":0, "stallId":1, "name":1, "stallNo": 1})]
+        "stalls": [doc for doc in db.stall.find({"location":hawkercode}, {"_id":0, "stallId":1, "name":1, "stallNo": 1}, sort=[("stallId",1)])]
     })
 
 @app.route('/hawkers')
