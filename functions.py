@@ -8,6 +8,13 @@ def fetch_all_listings(db, _id=0):
     today = datetime.datetime.now().strftime("%d%m%Y")
     return [doc for doc in db.dailyListing.find({"date": {"$gte": today}}, {"_id": _id})]
 
+def fetch_listing_date_meal_zone(db, date, meal, zone, _id=0):
+    listing = db.dailyListing.find_one({"date": date, "meal": meal, "zone": zone}, {"_id": _id})
+    if listing:
+        listing['stalls'].sort(key=lambda x: x['stallId'])
+        listing['stalls'].sort(key=lambda x: x['available'], reverse=True)
+    return listing
+
 def fetch_listing(db, date, meal, _id=0):
     listing = db.dailyListing.find_one({"date": date, "meal": meal}, {"_id": _id})
     if listing:
@@ -15,7 +22,7 @@ def fetch_listing(db, date, meal, _id=0):
         listing['stalls'].sort(key=lambda x: x['available'], reverse=True)
     return listing
 
-def insert_listing(db, date, code, meal, orderAvailable=True):
+def insert_listing(db, date, code, meal, zone, orderAvailable=True):
     if fetch_listing(db, date, meal):
         raise Exception("Listing for this date already exists, use update instead!")
     listing = fetch_hawker_by_code(db, code)
@@ -32,6 +39,7 @@ def insert_listing(db, date, code, meal, orderAvailable=True):
         })
     listing['orderAvailable'] = orderAvailable
     listing['meal'] = meal
+    listing['zone'] = zone
     return db.dailyListing.insert_one(listing).inserted_id
 
 def del_listing(db, date):
@@ -180,6 +188,12 @@ def update_user_payment(db, aws_id, method, username):
 """
 transaction functions
 """
+def fetch_transactions_date_meal_zone(db, date, meal, zone):
+    transactions = []
+    for doc in db.transaction.find({"date": date, "meal": meal, "zone": zone}):
+        doc['_id'] = str(doc['_id'])
+        transactions.append(doc)
+    return transactions
 
 def fetch_transactions_by_date_meal(db, date, meal):
     transactions = []
@@ -188,7 +202,7 @@ def fetch_transactions_by_date_meal(db, date, meal):
         transactions.append(doc)
     return transactions
 
-def insert_transaction(db, awsId, date, cart, paymentMethod, paymentUsername, meal, paid=False):
+def insert_transaction(db, awsId, date, cart, paymentMethod, paymentUsername, meal, zone, paid=False):
     if not fetch_user(db, awsId):
         raise Exception("User with this ID already exists!")
     transaction = {
@@ -199,8 +213,9 @@ def insert_transaction(db, awsId, date, cart, paymentMethod, paymentUsername, me
         "paid": paid,
         "paymentMethod": paymentMethod,
         "paymentUsername": paymentUsername,
-        "totalPrice": sum([food['price'] for food in cart]),
-        "meal": meal
+        "totalPrice": sum([food['price']*food['quantity'] for food in cart]) + sum([food['margin']*food['quantity'] for food in cart]),
+        "meal": meal,
+        "zone": zone
     }
     inserted_id = db.transaction.insert_one(transaction).inserted_id
     return inserted_id

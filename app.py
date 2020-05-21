@@ -25,6 +25,10 @@ def get_all_listings():
         "listings": fetch_all_listings(db)
     })
 
+@app.route('/listings/get/<date>/<meal>/<zone>')
+def get_listing_date_meal_zone(date, meal, zone):
+    return jsonify(fetch_listing_date_meal_zone(db, date, meal, zone))
+
 @app.route('/listings/<date>/<meal>', methods=["GET"])
 def get_listing_by_date(date, meal):
     return jsonify(fetch_listing(db, date, meal))
@@ -34,7 +38,12 @@ def add_listing(date):
     if request.json:
         data = request.json
         try:
-            inserted_id = insert_listing(db, date, data['code'], data['meal'])
+            # Remove later when handled
+            if 'zone' not in data:
+                zone = "Tembusu"
+            else:
+                zone = data['zone']
+            inserted_id = insert_listing(db, date, data['code'], data['meal'], zone)
             return jsonify({
                 "success": str(inserted_id)
             })
@@ -317,6 +326,20 @@ def update_payment():
             "error": "No request body provided"
         })
 
+"""
+TRANSACTIONS
+"""
+@app.route('/transactions/get/<date>/<meal>/<zone>', methods=["POST"])
+def get_transactions_date_meal_zone(date, meal, zone):
+    try:
+        return jsonify({
+            "transactions": fetch_transactions_date_meal_zone(db, date, meal, zone)
+        })
+    except Exception as e:
+        return jsonify({
+            "error": str(e)
+        })
+
 @app.route('/transactions/datemeal/<date>/<meal>', methods=["POST"])
 def get_transaction_by_date_meal(date, meal):
     try:
@@ -350,7 +373,12 @@ def add_transaction():
     if request.json:
         data = request.json
         try:
-            inserted_id = insert_transaction(db, data['awsId'], data['date'], data['cart'], data['paymentMethod'], data['paymentUsername'], data['meal'])
+            # Removed when handled
+            if 'zone' in data:
+                zone = data['zone']
+            else:
+                zone = "Tembusu"
+            inserted_id = insert_transaction(db, data['awsId'], data['date'], data['cart'], data['paymentMethod'], data['paymentUsername'], data['meal'], zone)
             return jsonify({
                 "success": str(inserted_id)
             })
