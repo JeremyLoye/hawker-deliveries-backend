@@ -3,9 +3,18 @@
         "app_function": "app.app",
         "aws_region": "ap-southeast-1",
         "profile_name": "zappa-admin",
-        "project_name": "backend",
+        "project_name": "hawkerjio",
         "runtime": "python3.7",
-        "s3_bucket": "zappa-05me30sa5",
+        "s3_bucket": "zappav1",
+        "cors": true
+    },
+    "production": {
+        "app_function": "app.app",
+        "aws_region": "ap-southeast-1",
+        "profile_name": "zappa-admin",
+        "project_name": "hawkerjio",
+        "runtime": "python3.7",
+        "s3_bucket": "zappav1",
         "cors": true
     }
 }

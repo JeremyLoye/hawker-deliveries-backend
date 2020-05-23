@@ -2,3 +2,4 @@ zappaenv/
 credentials.ini
 .ipynb_checkpoints
 .metals
+*.ipynb
