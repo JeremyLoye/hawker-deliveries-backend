@@ -38,12 +38,7 @@ def add_listing(date):
     if request.json:
         data = request.json
         try:
-            # Remove later when handled
-            if 'zone' not in data:
-                zone = "Tembusu"
-            else:
-                zone = data['zone']
-            inserted_id = insert_listing(db, date, data['code'], data['meal'], zone)
+            inserted_id = insert_listing(db, date, data['code'], data['meal'], data['zone'])
             return jsonify({
                 "success": str(inserted_id)
             })
@@ -378,12 +373,7 @@ def add_transaction():
     if request.json:
         data = request.json
         try:
-            # Removed when handled
-            if 'zone' in data:
-                zone = data['zone']
-            else:
-                zone = "Tembusu"
-            inserted_id = insert_transaction(db, data['awsId'], data['date'], data['cart'], data['paymentMethod'], data['paymentUsername'], data['meal'], zone)
+            inserted_id = insert_transaction(db, data['awsId'], data['date'], data['cart'], data['paymentMethod'], data['paymentUsername'], data['meal'], data['zone'])
             return jsonify({
                 "success": str(inserted_id)
             })
