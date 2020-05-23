@@ -1,5 +1,6 @@
 import datetime
 from bson.objectid import ObjectId
+from aggregations import *
 
 """
 dailyListing functions
@@ -13,6 +14,17 @@ def fetch_listing_date_meal_zone(db, date, meal, zone, _id=0):
     if listing:
         listing['stalls'].sort(key=lambda x: x['stallId'])
         listing['stalls'].sort(key=lambda x: x['available'], reverse=True)
+        minQtyCheck = list(filter(lambda stall: stall['minQty']>0, listing['stalls']))
+        minPriceCheck = list(filter(lambda stall: stall['minPrice']>0, listing['stalls']))
+        if len(minQtyCheck) > 0:
+            minQtyCheck = [stall['stallId'] for stall in minQtyCheck]
+            minQtyCheck = {stall['_id']:stall['total_qty'] for stall in aggregate_transaction_stall_qty(db, date, meal, zone, minQtyCheck)}
+        if len(minPriceCheck) > 0:
+            minPriceCheck = [stall['stallId'] for stall in minPriceCheck]
+            minPriceCheck = {stall['_id']:stall['total_price'] for stall in aggregate_transaction_stall_price(db, date, meal, zone, minPriceCheck)}
+        for stall in listing['stalls']:
+            stall['currentQty'] = minQtyCheck[stall['stallId']] if stall['stallId'] in minQtyCheck else -1
+            stall['currentPrice'] = minPriceCheck[stall['stallId']] if stall['stallId'] in minPriceCheck else -1
     return listing
 
 def fetch_listing(db, date, meal, _id=0):
@@ -35,7 +47,9 @@ def insert_listing(db, date, code, meal, zone, orderAvailable=True):
             "type": stall['type'],
             "image": stall['image'],
             "available": True,
-            "food": [{**food, 'quantity': -1} for food in stall['food'] if food['available']]
+            "food": [{**food, 'quantity': -1} for food in stall['food'] if food['available']],
+            "minQty": 0,
+            "minPrice": 0
         })
     listing['orderAvailable'] = orderAvailable
     listing['meal'] = meal
@@ -71,6 +85,30 @@ def update_food_quantity(db, date, stallId, foodId, meal, zone, quantity):
                     food['quantity'] = int(quantity)
                     updated = db.dailyListing.update_one({"date": date, "meal": meal, "zone": zone}, {"$set": {"stalls": stalls}}).modified_count
                     return updated
+    raise Exception("No such stall or food in this listing")
+
+def update_stall_min_qty(db, date, meal, zone, stallId, minQty):
+    listing = fetch_listing_date_meal_zone(db, date, meal, zone)
+    if not listing:
+        raise Exception("Listing unavailable for this date")
+    stalls = listing['stalls']
+    for stall in stalls:
+        if stall['stallId'] == stallId:
+            stall['minQty'] = minQty
+            updated = db.dailyListing.update_one({"date": date, "meal": meal, "zone": zone}, {"$set": {"stalls": stalls}}).modified_count
+            return updated
+    raise Exception("No such stall or food in this listing")
+
+def update_stall_min_price(db, date, meal, zone, stallId, minPrice):
+    listing = fetch_listing_date_meal_zone(db, date, meal, zone)
+    if not listing:
+        raise Exception("Listing unavailable for this date")
+    stalls = listing['stalls']
+    for stall in stalls:
+        if stall['stallId'] == stallId:
+            stall['minPrice'] = minPrice
+            updated = db.dailyListing.update_one({"date": date, "meal": meal, "zone": zone}, {"$set": {"stalls": stalls}}).modified_count
+            return updated
     raise Exception("No such stall or food in this listing")
 
 def fetch_stall_for_date_meal_zone(db, date, meal, zone, stallId, _id=0):

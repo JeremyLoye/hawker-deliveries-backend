@@ -98,6 +98,42 @@ def update_quantity(date):
             "error": "No request body provided"
         })
 
+@app.route('/listings/minqty', methods=["POST"])
+def update_minQty():
+    if request.json:
+        data = request.json
+        try:
+            modified = update_stall_min_qty(db, data['date'], data['meal'], data['zone'], data['stallId'], data['minQty'])
+            return jsonify({
+                "success": modified
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
+@app.route('/listings/minprice', methods=["POST"])
+def update_minPrice():
+    if request.json:
+        data = request.json
+        try:
+            modified = update_stall_min_price(db, data['date'], data['meal'], data['zone'], data['stallId'], data['minPrice'])
+            return jsonify({
+                "success": modified
+            })
+        except Exception as e:
+            return jsonify({
+                "error": str(e)
+            })
+    else:
+        return jsonify({
+            "error": "No request body provided"
+        })
+
 @app.route('/listings/<date>/<meal>/<zone>/stall/<stallId>', methods=["GET"])
 def get_stall_for_date_meal_zone(date, meal, zone, stallId):
     try:
