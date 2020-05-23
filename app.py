@@ -56,11 +56,11 @@ def add_listing(date):
             "error": "No request body provided"
         })
 
-@app.route('/listings/<date>/delete', methods=["POST"])
-def remove_listing(date):
+@app.route('/listings/<date>/<meal>/<zone>/delete', methods=["POST"])
+def remove_listing(date, meal, zone):
     try:
         return jsonify({
-            "success": del_listing(db, date)
+            "success": del_listing(db, date, meal, zone)
         })
     except Exception as e:
         return jsonify({
@@ -72,7 +72,7 @@ def update_availability(date):
     if request.json:
         data = request.json
         try:
-            modified = update_stall_availability(db, date, data['stallId'], data['meal'], data['available'])
+            modified = update_stall_availability(db, date, data['stallId'], data['meal'], data['zone'], data['available'])
             return jsonify({
                 "success": modified
             })
@@ -90,7 +90,7 @@ def update_quantity(date):
     if request.json:
         data = request.json
         try:
-            modified = update_food_quantity(db, date, data['stallId'], data['foodId'], data['meal'], data['quantity'])
+            modified = update_food_quantity(db, date, data['stallId'], data['foodId'], data['meal'], data['zone'], data['quantity'])
             return jsonify({
                 "success": modified
             })
@@ -103,9 +103,14 @@ def update_quantity(date):
             "error": "No request body provided"
         })
 
-@app.route('/listings/<date>/stall/<stallId>', methods=["GET"])
-def get_stall_for_date(date, stallId):
-    return jsonify(fetch_stall_for_date(db, stallId, date))
+@app.route('/listings/<date>/<meal>/<zone>/stall/<stallId>', methods=["GET"])
+def get_stall_for_date_meal_zone(date, meal, zone, stallId):
+    try:
+        return jsonify(fetch_stall_for_date_meal_zone(db, date, meal, zone, stallId))
+    except Exception as e:
+        return jsonify({
+            "error": str(e)
+        })
 
 @app.route('/hawkercodes', methods=["GET"])
 def get_hawker_codes():

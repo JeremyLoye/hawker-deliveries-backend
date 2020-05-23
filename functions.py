@@ -23,7 +23,7 @@ def fetch_listing(db, date, meal, _id=0):
     return listing
 
 def insert_listing(db, date, code, meal, zone, orderAvailable=True):
-    if fetch_listing(db, date, meal):
+    if fetch_listing_date_meal_zone(db, date, meal, zone):
         raise Exception("Listing for this date already exists, use update instead!")
     listing = fetch_hawker_by_code(db, code)
     listing['date'] = date
@@ -42,11 +42,11 @@ def insert_listing(db, date, code, meal, zone, orderAvailable=True):
     listing['zone'] = zone
     return db.dailyListing.insert_one(listing).inserted_id
 
-def del_listing(db, date):
-    return db.dailyListing.delete_one({"date": date}).deleted_count
+def del_listing(db, date, meal, zone):
+    return db.dailyListing.delete_one({"date": date, "meal": meal, "zone": zone}).deleted_count
 
-def update_stall_availability(db, date, stallId, meal, availability):
-    listing = fetch_listing(db, date, meal)
+def update_stall_availability(db, date, stallId, meal, zone, availability):
+    listing = fetch_listing_date_meal_zone(db, date, meal, zone)
     if not listing:
         raise Exception("Listing unavailable for this date")
     if type(availability) != bool:
@@ -55,12 +55,12 @@ def update_stall_availability(db, date, stallId, meal, availability):
     for stall in stalls:
         if stall['stallId'] == stallId:
             stall['available'] = availability
-            updated = db.dailyListing.update_one({"date": date}, {"$set": {"stalls": stalls}}).modified_count
+            updated = db.dailyListing.update_one({"date": date, "meal": meal, "zone": zone}, {"$set": {"stalls": stalls}}).modified_count
             return updated
     raise Exception("No such stall in this listing")
 
-def update_food_quantity(db, date, stallId, foodId, meal, quantity):
-    listing = fetch_listing(db, date, meal)
+def update_food_quantity(db, date, stallId, foodId, meal, zone, quantity):
+    listing = fetch_listing_date_meal_zone(db, date, meal, zone)
     if not listing:
         raise Exception("Listing unavailable for this date")
     stalls = listing['stalls']
@@ -69,16 +69,35 @@ def update_food_quantity(db, date, stallId, foodId, meal, quantity):
             for food in stall['food']:
                 if food['id'] == foodId:
                     food['quantity'] = int(quantity)
-                    updated = db.dailyListing.update_one({"date": date}, {"$set": {"stalls": stalls}}).modified_count
+                    updated = db.dailyListing.update_one({"date": date, "meal": meal, "zone": zone}, {"$set": {"stalls": stalls}}).modified_count
                     return updated
     raise Exception("No such stall or food in this listing")
 
-def fetch_stall_for_date(db, stallId, date, _id=0):
-    stall = db.dailyListing.find_one({"date": date}, {"stalls": {"$elemMatch": {"stallId": stallId}}, "_id": _id})['stalls'][0]
+def fetch_stall_for_date_meal_zone(db, date, meal, zone, stallId, _id=0):
+    stall = db.dailyListing.find_one({"date": date, "meal": meal, "zone": zone}, {"stalls": {"$elemMatch": {"stallId": stallId}}, "_id": _id})
+    if not stall:
+        raise Exception("Stall does not exist for this date/meal/zone")
+    stall = stall['stalls'][0]
+    if not stall['available']:
+        raise Exception("Stall is not available for this date/meal/zone")
     new_info = fetch_stall_by_id(db, stall['stallId'])
     stall['about'] = new_info['about']
     stall['contact'] = new_info['contact']
     stall['stallNo'] = new_info['stallNo']
+    for food in stall['food']:
+        if food['quantity'] < 1:
+            continue
+        quantity = 0
+        carts = [doc for doc in db.transaction.find(
+            {'date': date, 'meal': meal, 'zone': zone, "cart":{"$elemMatch": {"stallId": stallId, "id": food['id']}}},
+            {"cart":{"$elemMatch": {"stallId": stallId, "id": food['id']}}, "_id": _id})]
+        for cart in carts:
+            for item in cart['cart']:
+                quantity += item['quantity']
+        food['quantity'] -= quantity
+        if food['quantity'] <= 0:
+            food['quantity'] = 0
+    stall['food'] = [food for food in stall['food'] if food['quantity'] != 0]
     return stall
 
 """
